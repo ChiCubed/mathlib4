@@ -257,7 +257,7 @@ def singleAddHom (m : M) : R →+ (MonoidAlgebra R M) where
 
 /-- If two additive homomorphisms from `MonoidAlgebra R M` are equal on each `single r m`,
 then they are equal. -/
-@[to_additive
+@[to_additive AddMonoidAlgebra.addMonoidHom_ext
 /-- If two additive homomorphisms from `MonoidAlgebra R M` are equal on each `single r m`,
 then they are equal. -/]
 lemma addMonoidHom_ext [AddZeroClass N] ⦃f g : MonoidAlgebra R M →+ N⦄
