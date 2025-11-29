@@ -88,9 +88,10 @@ protected noncomputable def opRingEquiv [AddCommMagma G] :
 -- Not `@[simp]` because the LHS simplifies further.
 -- TODO: the LHS simplifies to `Finsupp.single`, which implies there's some defeq abuse going on.
 theorem opRingEquiv_single [AddCommMagma G] (r : k) (x : G) :
-    AddMonoidAlgebra.opRingEquiv (op (single x r)) = single x (op r) := by simp
+    AddMonoidAlgebra.opRingEquiv (op (single x r)) = single x (op r) := by ext; simp
 
 theorem opRingEquiv_symm_single [AddCommMagma G] (r : kᵐᵒᵖ) (x : Gᵐᵒᵖ) :
-    AddMonoidAlgebra.opRingEquiv.symm (single x r) = op (single x r.unop) := by simp
+    AddMonoidAlgebra.opRingEquiv.symm (single x r) = op (single x r.unop) := by
+  rw [← MulOpposite.unop_inj]; ext; simp
 
 end AddMonoidAlgebra
