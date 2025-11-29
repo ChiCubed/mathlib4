@@ -1108,27 +1108,3 @@ lemma IsUnit.prod_univ_iff [Fintype ι] [CommMonoid M] {f : ι → M} :
 theorem nat_abs_sum_le (s : Finset ι) (f : ι → ℤ) :
     (∑ i ∈ s, f i).natAbs ≤ ∑ i ∈ s, (f i).natAbs := by
   induction s using Finset.cons_induction with grind
-
-namespace MulOpposite
-variable {ι M : Type*} [AddCommMonoid M]
-
-@[simp] lemma op_sum (s : Finset ι) (f : ι → M) : op (∑ i ∈ s, f i) = ∑ i ∈ s, op (f i) := by
-  induction s using Finset.cons_induction <;> simp [*]
-
-@[simp] lemma unop_sum (s : Finset ι) (f : ι → Mᵐᵒᵖ) :
-    unop (∑ i ∈ s, f i) = ∑ i ∈ s, unop (f i) := by
- induction s using Finset.cons_induction <;> simp [*]
-
-end MulOpposite
-
-namespace AddOpposite
-variable {ι M : Type*} [CommMonoid M]
-
-@[simp] lemma op_prod (s : Finset ι) (f : ι → M) : op (∏ i ∈ s, f i) = ∏ i ∈ s, op (f i) := by
-  induction s using Finset.cons_induction <;> simp [*]
-
-@[simp] lemma unop_prod (s : Finset ι) (f : ι → Mᵐᵒᵖ) :
-    unop (∏ i ∈ s, f i) = ∏ i ∈ s, unop (f i) := by
-  induction s using Finset.cons_induction <;> simp [*]
-
-end AddOpposite
