@@ -100,22 +100,59 @@ lemma mapRangeRingHom_comp_mapDomainRingHom (f : R →+* S) (g : M →* N) :
 
 end MonoidAlgebra
 
-namespace MulEquiv
-variable [Semiring R] [Semiring S] [Monoid M] [Monoid N]
+namespace Equiv
+variable [Semiring R] [Mul M] [Mul N]
 
 /-- Isomorphic monoids have isomorphic monoid algebras. -/
-@[to_additive (dont_translate := R S)]
-def monoidAlgebraCongrLeft (e : R ≃+* S) : MonoidAlgebra R M ≃+* MonoidAlgebra S M :=
-  .ofRingHom (MonoidAlgebra.mapRangeRingHom M e) (MonoidAlgebra.mapRangeRingHom M e.symm)
-    (by apply MonoidAlgebra.ringHom_ext <;> simp) (by apply MonoidAlgebra.ringHom_ext <;> simp)
+@[to_additive (dont_translate := R) (attr := simps apply symm_apply)
+/-- Isomorphic monoids have isomorphic monoid algebras. -/]
+def monoidAlgebraCongrRight (e : M ≃ N) : MonoidAlgebra R M ≃+ MonoidAlgebra R N where
+  toFun x := x.mapDomain e
+  invFun x := x.mapDomain e.symm
+  left_inv x := by ext; simp
+  right_inv x := by ext; simp
+  map_add' x y := by ext; simp
+
+end Equiv
+
+namespace AddEquiv
+variable [Semiring R] [Semiring S] [Mul M]
 
 /-- Isomorphic rings have isomorphic monoid algebras. -/
-@[to_additive (dont_translate := R)]
+@[to_additive (dont_translate := R S) (attr := simps)
+/-- Isomorphic rings have isomorphic monoid algebras. -/]
+def monoidAlgebraCongrLeft (e : R ≃+ S) : MonoidAlgebra R M ≃+ MonoidAlgebra S M where
+  toFun x := .ofCoeff <| .mapRange e e.map_zero x.coeff
+  invFun x := .ofCoeff <| .mapRange e.symm e.symm.map_zero x.coeff
+  left_inv x := by ext; simp
+  right_inv x := by ext; simp
+  map_add' x y := by ext; simp
+
+end AddEquiv
+
+namespace MulEquiv
+variable [Semiring R] [Monoid M] [Monoid N]
+
+/-- Isomorphic monoids have isomorphic monoid algebras. -/
+@[to_additive (dont_translate := R) (attr := simps! apply symm_apply)
+/-- Isomorphic monoids have isomorphic monoid algebras. -/]
 def monoidAlgebraCongrRight (e : M ≃* N) : MonoidAlgebra R M ≃+* MonoidAlgebra R N :=
   .ofRingHom (MonoidAlgebra.mapDomainRingHom R e) (MonoidAlgebra.mapDomainRingHom R e.symm)
     (by apply MonoidAlgebra.ringHom_ext <;> simp) (by apply MonoidAlgebra.ringHom_ext <;> simp)
 
 end MulEquiv
+
+namespace RingEquiv
+variable [Semiring R] [Semiring S] [Monoid M]
+
+/-- Isomorphic rings have isomorphic monoid algebras. -/
+@[to_additive (dont_translate := R S) (attr := simps! apply symm_apply)
+/-- Isomorphic rings have isomorphic monoid algebras. -/]
+def monoidAlgebraCongrLeft (e : R ≃+* S) : MonoidAlgebra R M ≃+* MonoidAlgebra S M :=
+  .ofRingHom (MonoidAlgebra.mapRangeRingHom M e) (MonoidAlgebra.mapRangeRingHom M e.symm)
+    (by apply MonoidAlgebra.ringHom_ext <;> simp) (by apply MonoidAlgebra.ringHom_ext <;> simp)
+
+end RingEquiv
 
 /-!
 #### Conversions between `AddMonoidAlgebra` and `MonoidAlgebra`

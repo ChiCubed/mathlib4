@@ -5,7 +5,7 @@ Authors: Johannes Hölzl, Yury Kudryashov, Kim Morrison
 -/
 module
 
-public import Mathlib.Algebra.MonoidAlgebra.Defs
+public import Mathlib.Algebra.MonoidAlgebra.MapDomain
 public import Mathlib.Algebra.Ring.Opposite
 public import Mathlib.Data.Finsupp.Basic
 
@@ -40,31 +40,20 @@ the `MonoidAlgebra Rᵐᵒᵖ Iᵐᵒᵖ` over the opposite ring, taking element
 @[simps! +simpRhs apply symm_apply]
 protected noncomputable def opRingEquiv [Mul G] :
     (MonoidAlgebra k G)ᵐᵒᵖ ≃+* MonoidAlgebra kᵐᵒᵖ Gᵐᵒᵖ where
-  __ := opAddEquiv.symm.trans <|
-      (Finsupp.mapRange.addEquiv (opAddEquiv : k ≃+ kᵐᵒᵖ)).trans <| Finsupp.domCongr opEquiv
+  toAddEquiv := opAddEquiv.symm.trans <| opEquiv.monoidAlgebraCongrRight.trans
+    opAddEquiv.monoidAlgebraCongrLeft
   map_mul' := by
-    -- This used to be `rw`, but we need `erw` after https://github.com/leanprover/lean4/pull/2644
-    rw [Equiv.toFun_as_coe, AddEquiv.toEquiv_eq_coe]; erw [AddEquiv.coe_toEquiv]
-    rw [← AddEquiv.coe_toAddMonoidHom]
-    refine Iff.mpr (AddMonoidHom.map_mul_iff (R := (MonoidAlgebra k G)ᵐᵒᵖ)
-      (S := MonoidAlgebra kᵐᵒᵖ Gᵐᵒᵖ) _) ?_
-    ext
-    -- Porting note: `reducible` cannot be `local` so proof gets long.
-    simp only [AddMonoidHom.coe_comp, Function.comp_apply, singleAddHom_apply,
-      AddMonoidHom.compr₂_apply, AddMonoidHom.coe_mul, AddMonoidHom.coe_mulLeft,
-      AddMonoidHom.compl₂_apply, AddEquiv.toAddMonoidHom_eq_coe,
-      AddEquiv.coe_addMonoidHom_trans]
-    -- This used to be `rw`, but we need `erw` after https://github.com/leanprover/lean4/pull/2644
-    erw [AddEquiv.trans_apply, AddEquiv.trans_apply, AddEquiv.trans_apply,
-      MulOpposite.opAddEquiv_symm_apply]
-    rw [MulOpposite.unop_mul (α := MonoidAlgebra k G)]
-    simp
+    classical
+    simp [-opEquiv_apply, coeff_mul, MonoidAlgebra.ext_iff, Finsupp.ext_iff, ← MulOpposite.unop_inj,
+      sum_mapRange_index, sum_mapDomain_index, mul_add, add_mul, ite_add_zero, apply_ite op]
+    simpa using fun _ _ _ ↦ Finsupp.sum_comm ..
 
 theorem opRingEquiv_single [Mul G] (r : k) (x : G) :
-    MonoidAlgebra.opRingEquiv (op (single x r)) = single (op x) (op r) := by simp
+    MonoidAlgebra.opRingEquiv (op (single x r)) = single (op x) (op r) := by ext; simp
 
 theorem opRingEquiv_symm_single [Mul G] (r : kᵐᵒᵖ) (x : Gᵐᵒᵖ) :
-    MonoidAlgebra.opRingEquiv.symm (single x r) = op (single x.unop r.unop) := by simp
+    MonoidAlgebra.opRingEquiv.symm (single x r) = op (single x.unop r.unop) := by
+  rw [← MulOpposite.unop_inj]; ext; simp
 
 end MonoidAlgebra
 
@@ -82,23 +71,19 @@ variable [Semiring k]
 the `AddMonoidAlgebra Rᵐᵒᵖ I` over the opposite ring, taking elements to their opposite. -/
 @[simps! +simpRhs apply symm_apply]
 protected noncomputable def opRingEquiv [AddCommMagma G] :
-    k[G]ᵐᵒᵖ ≃+* kᵐᵒᵖ[G] :=
-  { opAddEquiv.symm.trans (mapRange.addEquiv (opAddEquiv : k ≃+ kᵐᵒᵖ)) with
-    map_mul' := by
-      let f : k[G]ᵐᵒᵖ ≃+ kᵐᵒᵖ[G] :=
-        opAddEquiv.symm.trans (mapRange.addEquiv (opAddEquiv : k ≃+ kᵐᵒᵖ))
-      change ∀ (x y : k[G]ᵐᵒᵖ), f (x * y) = f x * f y
-      rw [← AddEquiv.coe_toAddMonoidHom, AddMonoidHom.map_mul_iff]
-      ext i₁ r₁ i₂ r₂ : 6
-      dsimp only [f, AddMonoidHom.compr₂_apply, AddMonoidHom.compl₂_apply,
-        AddMonoidHom.comp_apply, AddMonoidHom.coe_coe,
-        AddEquiv.toAddMonoidHom_eq_coe, AddEquiv.coe_addMonoidHom_trans,
-        singleAddHom_apply, opAddEquiv_apply, opAddEquiv_symm_apply,
-        AddMonoidHom.coe_mul, AddMonoidHom.coe_mulLeft, unop_mul, unop_op]
-      -- Defeq abuse. Probably `k[G]` vs `G →₀ k`.
-      erw [mapRange.addEquiv_apply, mapRange.addEquiv_apply, mapRange.addEquiv_apply]
-      rw [single_mul_single, mapRange_single, mapRange_single, mapRange_single, single_mul_single]
-      simp only [opAddEquiv_apply, op_mul, add_comm] }
+    k[G]ᵐᵒᵖ ≃+* kᵐᵒᵖ[G] where
+  toAddEquiv := opAddEquiv.symm.trans opAddEquiv.addMonoidAlgebraCongrLeft
+  map_mul' := by
+    classical
+    simp only [AddEquiv.toEquiv_eq_coe, Equiv.toFun_as_coe, EquivLike.coe_coe, AddEquiv.trans_apply,
+      opAddEquiv_symm_apply, unop_mul, AddMonoidAlgebra.ext_iff,
+      AddEquiv.addMonoidAlgebraCongrLeft_apply_coeff, opAddEquiv_apply, Finsupp.ext_iff,
+      mapRange_apply, coeff_mul, op_finsuppSum, mul_zero, ite_self, implies_true,
+      sum_mapRange_index, zero_mul, sum_zero, ← unop_inj, unop_finsuppSum, unop_op, apply_ite unop,
+      unop_zero, «forall»]
+    rintro x y a
+    rw [Finsupp.sum_comm]
+    simp [add_comm]
 
 -- Not `@[simp]` because the LHS simplifies further.
 -- TODO: the LHS simplifies to `Finsupp.single`, which implies there's some defeq abuse going on.
