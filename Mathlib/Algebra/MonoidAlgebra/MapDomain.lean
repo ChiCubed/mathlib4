@@ -100,6 +100,23 @@ lemma mapRangeRingHom_comp_mapDomainRingHom (f : R →+* S) (g : M →* N) :
 
 end MonoidAlgebra
 
+namespace MulEquiv
+variable [Semiring R] [Semiring S] [Monoid M] [Monoid N]
+
+/-- Isomorphic monoids have isomorphic monoid algebras. -/
+@[to_additive (dont_translate := R S)]
+def monoidAlgebraCongrLeft (e : R ≃+* S) : MonoidAlgebra R M ≃+* MonoidAlgebra S M :=
+  .ofRingHom (MonoidAlgebra.mapRangeRingHom M e) (MonoidAlgebra.mapRangeRingHom M e.symm)
+    (by apply MonoidAlgebra.ringHom_ext <;> simp) (by apply MonoidAlgebra.ringHom_ext <;> simp)
+
+/-- Isomorphic rings have isomorphic monoid algebras. -/
+@[to_additive (dont_translate := R)]
+def monoidAlgebraCongrRight (e : M ≃* N) : MonoidAlgebra R M ≃+* MonoidAlgebra R N :=
+  .ofRingHom (MonoidAlgebra.mapDomainRingHom R e) (MonoidAlgebra.mapDomainRingHom R e.symm)
+    (by apply MonoidAlgebra.ringHom_ext <;> simp) (by apply MonoidAlgebra.ringHom_ext <;> simp)
+
+end MulEquiv
+
 /-!
 #### Conversions between `AddMonoidAlgebra` and `MonoidAlgebra`
 
@@ -114,20 +131,28 @@ variable (k G) in
 `Multiplicative` -/
 protected def AddMonoidAlgebra.toMultiplicative [Semiring k] [Add G] :
     AddMonoidAlgebra k G ≃+* MonoidAlgebra k (Multiplicative G) where
-  __ := Finsupp.domCongr Multiplicative.ofAdd
-  toFun := equivMapDomain Multiplicative.ofAdd
+  toFun x := .ofCoeff <| x.coeff.mapDomain .ofAdd
+  invFun x := .ofCoeff <| x.coeff.mapDomain Multiplicative.toAdd
+  left_inv x := by ext; simp
+  right_inv x := by ext; simp
+  map_add' x y := by simp [Finsupp.mapDomain_add]
   map_mul' x y := by
-    repeat' rw [equivMapDomain_eq_mapDomain (M := k)]
-    dsimp [Multiplicative.ofAdd]
-    exact MonoidAlgebra.mapDomain_mul (M := Multiplicative G) (MulHom.id (Multiplicative G)) x y
+    classical
+    ext
+    simp [MonoidAlgebra.coeff_mul, AddMonoidAlgebra.coeff_mul, Finsupp.sum_mapDomain_index, add_mul,
+      mul_add, ite_add_zero, Multiplicative.ext_iff]
 
 variable (k G) in
 /-- The equivalence between `MonoidAlgebra` and `AddMonoidAlgebra` in terms of `Additive` -/
 protected def MonoidAlgebra.toAdditive [Semiring k] [Mul G] :
     MonoidAlgebra k G ≃+* AddMonoidAlgebra k (Additive G) where
-  __ := Finsupp.domCongr Additive.ofMul
-  toFun := equivMapDomain Additive.ofMul
+  toFun x := .ofCoeff <| x.coeff.mapDomain .ofMul
+  invFun x := .ofCoeff <| x.coeff.mapDomain Additive.toMul
+  left_inv x := by ext; simp
+  right_inv x := by ext; simp
+  map_add' x y := by simp [Finsupp.mapDomain_add]
   map_mul' x y := by
-    repeat' rw [equivMapDomain_eq_mapDomain (M := k)]
-    dsimp [Additive.ofMul]
-    convert MonoidAlgebra.mapDomain_mul (MulHom.id G) x y
+    classical
+    ext
+    simp [MonoidAlgebra.coeff_mul, AddMonoidAlgebra.coeff_mul, Finsupp.sum_mapDomain_index, add_mul,
+      mul_add, ite_add_zero, Additive.ext_iff]
