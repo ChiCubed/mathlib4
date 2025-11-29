@@ -56,13 +56,13 @@ instance distribMulAction [Monoid R] [Semiring k] [DistribMulAction R k] :
     DistribMulAction R (MonoidAlgebra k G) :=
   coeffEquiv.distribMulAction _
 
-@[to_additive (dont_translate := R)]
+@[to_additive (dont_translate := R) (relevant_arg := G)]
 instance module [Semiring R] [Semiring k] [Module R k] : Module R (MonoidAlgebra k G) :=
   coeffEquiv.module _
 
 variable (R) in
 /-- `MonoidAlgebra.coeff` as a linear equiv. -/
-@[to_additive (attr := simps!) /-- `MonoidAlgebra.coeff` as a linear equiv. -/]
+@[to_additive (attr := simps!) (relevant_arg := G) /-- `MonoidAlgebra.coeff` as a linear equiv. -/]
 def coeffLinearEquiv [Semiring R] [Semiring k] [Module R k] : MonoidAlgebra k G ≃ₗ[R] G →₀ k :=
   coeffEquiv.linearEquiv _
 
