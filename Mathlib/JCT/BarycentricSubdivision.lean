@@ -305,8 +305,7 @@ lemma eq_sum_over_supp :
 end CategoryTheory.Limits.Sigma
 
 
--- TODO: put this under AlgebraicTopology where it belongs(?)
-namespace SSet.SingularChainComplex
+namespace AlgebraicTopology.SSet.SingularChainComplex
 
 variable
   {C : Type u} [Category.{v} C] [Preadditive C] [HasCoproducts.{w} C]
@@ -470,7 +469,139 @@ theorem desc_comp_right
   apply hom_ext
   simp
 
-end SSet.SingularChainComplex
+namespace Lifting
+
+set_option backward.isDefEq.respectTransparency false
+
+local notation3 "Uℤ" => AddCommGrpCat.of <| ULift ℤ
+local notation3 "∐[" σ "; " R "]" => (sigmaConst.obj R).obj σ
+
+variable {σ τ ι : Type w}
+
+noncomputable def liftSigmaConstMap
+    (f : (sigmaConst.obj (C := Ab.{w}) Uℤ).obj σ ⟶ ∐[ι; Uℤ]) :
+    ∐[σ; R] ⟶ ∐[ι; R] :=
+  Sigma.desc fun i => Finsupp.linearCombination _ (Sigma.ι _)
+    ((Sigma.ι _ i ≫ f ≫ Sigma.desc fun j => AddCommGrpCat.ofHom
+      (Finsupp.lsingle (R := ℤ) j).toAddMonoidHom) 1)
+
+@[simp] lemma liftSigmaConstMap_zero :
+    liftSigmaConstMap R (σ := σ) (ι := ι) 0 = 0 := by
+  aesop (add simp liftSigmaConstMap)
+
+@[simp] lemma liftSigmaConstMap_id :
+    liftSigmaConstMap R (𝟙 ∐[σ; Uℤ]) = 𝟙 ∐[σ; R] := by
+  aesop (add simp liftSigmaConstMap)
+
+@[simp] lemma liftSigmaConstMap_map (φ : σ → ι) :
+    liftSigmaConstMap R ((sigmaConst.obj Uℤ).map φ) = (sigmaConst.obj R).map φ := by
+  aesop (add simp liftSigmaConstMap)
+
+@[simp] lemma liftSigmaConstMap_add (f g : ∐[σ; Uℤ] ⟶ ∐[ι; Uℤ]) :
+    liftSigmaConstMap R (f + g) = liftSigmaConstMap R f + liftSigmaConstMap R g := by
+  aesop (add simp liftSigmaConstMap)
+
+@[simp] lemma liftSigmaConstMap_sum {α : Type*} (s : Finset α)
+    (f : α → (∐[σ; Uℤ] ⟶ ∐[ι; Uℤ])) :
+    liftSigmaConstMap R (∑ i ∈ s, f i) = ∑ i ∈ s, liftSigmaConstMap R (f i) := by
+  classical
+  induction s using Finset.induction_on with simp_all [- sigmaConst_obj_obj]
+
+@[simp] lemma liftSigmaConstMap_smul
+    (f : ∐[σ; Uℤ] ⟶ ∐[ι; Uℤ]) (a : ℤ) :
+    liftSigmaConstMap R (a • f) = a • liftSigmaConstMap R f := by
+  aesop (add simp liftSigmaConstMap)
+
+@[simp] lemma liftSigmaConstMap_comp
+    (f : ∐[σ; Uℤ] ⟶ ∐[τ; Uℤ]) (g : ∐[τ; Uℤ] ⟶ ∐[ι; Uℤ]) :
+    liftSigmaConstMap R (f ≫ g) = liftSigmaConstMap R f ≫ liftSigmaConstMap R g := by
+  -- stolen from andrew, idk what's going on but it works
+  dsimp only [sigmaConst_obj_obj, liftSigmaConstMap, ULift.smul_def]
+  ext i
+  simp only [Category.assoc, Sigma.ι_desc, Sigma.ι_desc_assoc]
+  refine .trans ?_ congr($(Finsupp.linearCombination_linear_comp _
+    ((Preadditive.rightComp _ _).toIntLinearMap.restrictScalars _)) _)
+  dsimp only [Function.comp_def, LinearMap.coe_restrictScalars, AddMonoidHom.coe_toIntLinearMap,
+    CategoryTheory.Preadditive.rightComp, AddMonoidHom.mk'_apply]
+  simp only [Sigma.ι_desc]
+  rw [← Finsupp.linearCombination_linearCombination]
+  congr 1
+  refine .trans ?_ congr($(Finsupp.linearCombination_linear_comp _
+    ((g ≫ Limits.Sigma.desc fun i ↦ AddCommGrpCat.ofHom (Finsupp.lsingle (R := ℤ) i).toAddMonoidHom)
+    |>.hom.toIntLinearMap.restrictScalars (ULift ℤ))) _).symm
+  dsimp
+  congr 2
+  have : (Limits.Sigma.desc fun i ↦ AddCommGrpCat.ofHom (Finsupp.lsingle (R := ℤ) i).toAddMonoidHom)
+      ≫ AddCommGrpCat.ofHom (Finsupp.linearCombination (ULift.{w} ℤ) fun i ↦
+        (Sigma.ι (fun x : τ ↦ AddCommGrpCat.of (ULift.{w} ℤ)) i).hom 1).toAddMonoidHom = 𝟙 _ := by
+    ext; simp [← map_zsmul]; rfl
+  exact congr($this _).symm
+
+
+-- idk lol
+@[local simp] lemma chainComplex_X (s : SSet.{w}) (R : C) n :
+    𝒞[s; R].X n = ∐[s _⦋n⦌; R] :=
+  rfl
+
+variable {s s' : SSet.{w}}
+
+@[local simp] lemma liftSigmaConstMap_singularChainComplexFunctor_d.aux {n} :
+    liftSigmaConstMap R (∂[s; Uℤ] (n + 1) n) = ∂[s; R] (n + 1) n := by
+  simp [- sigmaConst_obj_obj, - sigmaConst_obj_map, SSet.SingularChainComplex.d_eq,
+    SimplicialObject.δ]
+
+@[simp] lemma liftSigmaConstMap_singularChainComplexFunctor_d {i j} :
+    liftSigmaConstMap R (∂[s; Uℤ] i j) = ∂[s; R] i j := by
+  by_cases h : (ComplexShape.down ℕ).Rel i j
+  · obtain rfl : j + 1 = i := by simpa using h
+    simp
+  · simp [HomologicalComplex.shape _ _ _ h]
+
+noncomputable def liftChainMap
+    (f : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]) :
+    𝒞[s; R] ⟶ 𝒞[s'; R] where
+  f n := liftSigmaConstMap R (f.f n)
+  comm' i j hij := by
+    simp only [chainComplex_X, ← liftSigmaConstMap_singularChainComplexFunctor_d (R := R)]
+    -- defeq causing problems as usual
+    rw [← liftSigmaConstMap_comp, ← liftSigmaConstMap_comp, f.comm' _ _ hij]
+
+@[simp] lemma liftChainMap_id :
+    liftChainMap R (𝟙 𝒞[s; Uℤ]) = 𝟙 𝒞[s; R] := by
+  ext; simp [- sigmaConst_obj_obj, liftChainMap]
+
+@[simp] lemma liftChainMap_map (f : s ⟶ s') :
+    liftChainMap R (𝒞[—; Uℤ].map f) = 𝒞[—; R].map f := by
+  aesop (add simp [SSet.singularChainComplexFunctor, liftChainMap, liftSigmaConstMap])
+
+@[simp] lemma liftChainMap_comp
+    {s s' s''} (f : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]) (g : 𝒞[s'; Uℤ] ⟶ 𝒞[s''; Uℤ]) :
+    liftChainMap R (f ≫ g) = liftChainMap R f ≫ liftChainMap R g := by
+  ext; simp [liftChainMap]
+
+noncomputable def liftHomotopy
+    {f g : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]}
+    (h : _root_.Homotopy f g) :
+    _root_.Homotopy (liftChainMap R f) (liftChainMap.{w} R g) where
+  hom i j := liftSigmaConstMap R (h.hom i j)
+  zero := by aesop (add simp h.zero)
+  comm := by aesop (add simp [h.comm, liftChainMap, dNext, prevD]) (erase simp [sigmaConst_obj_obj])
+
+noncomputable def liftHomotopyEquiv
+    (e : HomotopyEquiv 𝒞[s; Uℤ] 𝒞[s'; Uℤ]) :
+    HomotopyEquiv 𝒞[s; R] 𝒞[s'; R] where
+  hom := liftChainMap R e.hom
+  inv := liftChainMap R e.inv
+  -- not very dataful fields but that's just fine for us
+  -- (could make this a trans with ofEq on either side)
+  homotopyHomInvId := by convert liftHomotopy R e.homotopyHomInvId <;> simp
+  homotopyInvHomId := by convert liftHomotopy R e.homotopyInvHomId <;> simp
+
+-- TODO: some stuff like `quasiIso_iff_mem_homotopyEquivalences`
+
+end Lifting
+
+end AlgebraicTopology.SSet.SingularChainComplex
 
 
 namespace AlgebraicTopology
@@ -1586,6 +1717,43 @@ scoped notation3 "ι♯[" U "; " R "]" => restrictedChainComplex.toChainComplex 
 local notation3 "ι♯" => ι♯[U; R]
 
 
+section ForLater
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def restrictedSSet.incl i :
+    𝒮 (.of (U i)) ⟶ 𝒮ʳ X U :=
+  let f := 𝒮* <| TopCat.ofHom <| .restrict (U i) (.id _)
+  𝒮ʳ X U |>.lift f ?_
+where finally
+  rw [Subfunctor.le_def]
+  rintro ⟨n⟩
+  cases n using SimplexCategory.rec with | h n
+  simp only [Subfunctor.range_obj, restrictedSSet, Functor.op_obj, SimplexCategory.toTop_obj,
+    TopCat.uliftFunctor, yoneda_obj_obj, Set.range_subset_iff, ULift.forall,
+    SimplexCategory.len_mk, Set.le_eq_subset, Set.mem_setOf_eq]
+  intro x
+  exists i
+  intro y
+  simp [f, TopCat.toSSet]
+
+noncomputable def restrictedChainComplex.incl i :
+    𝒞[𝒮 (.of (U i)); R] ⟶ 𝒞[𝒮ʳ X U; R] :=
+  𝒞[—; R].map <| restrictedSSet.incl ..
+
+@[simp] theorem restrictedSSet.incl_ι i :
+    incl X U i ≫ (𝒮ʳ X U).ι =
+    𝒮* (TopCat.ofHom <| .restrict (U i) (.id _)) := by
+  simp [incl]
+
+omit [HasFilteredColimitsOfSize C] [IsFinitelyPresentable R] in
+@[simp] theorem restrictedChainComplex.incl_ι i :
+    incl X U i ≫ ι♯ =
+    𝒞[—; R].map (𝒮* (TopCat.ofHom <| .restrict (U i) (.id _))) := by
+  simp [incl, restrictedChainComplex.toChainComplex, ← Functor.map_comp]
+
+end ForLater
+
+
 namespace restrictedChainComplex
 
 instance {n} : Mono (ι♯.f n) := by
@@ -2031,146 +2199,6 @@ noncomputable def homotopyEquiv [Projective R] :
 
 end Aux
 
-end restrictedChainComplex.toChainComplex
-
-
-/-
-now we map from (C, R) := (Ab, ℤ) to any category
--/
-
-section lifting
-
-set_option backward.isDefEq.respectTransparency false
-
-local notation3 "Uℤ" => AddCommGrpCat.of <| ULift ℤ
-local notation3 "∐[" σ "; " R "]" => (sigmaConst.obj R).obj σ
-
-variable {σ τ ι : Type w}
-
-noncomputable def liftSigmaConstMap
-    (f : (sigmaConst.obj (C := Ab.{w}) Uℤ).obj σ ⟶ ∐[ι; Uℤ]) :
-    ∐[σ; R] ⟶ ∐[ι; R] :=
-  Sigma.desc fun i => Finsupp.linearCombination _ (Sigma.ι _)
-    ((Sigma.ι _ i ≫ f ≫ Sigma.desc fun j => AddCommGrpCat.ofHom
-      (Finsupp.lsingle (R := ℤ) j).toAddMonoidHom) 1)
-
-@[simp] lemma liftSigmaConstMap_zero :
-    liftSigmaConstMap R (σ := σ) (ι := ι) 0 = 0 := by
-  aesop (add simp liftSigmaConstMap)
-
-@[simp] lemma liftSigmaConstMap_id :
-    liftSigmaConstMap R (𝟙 ∐[σ; Uℤ]) = 𝟙 ∐[σ; R] := by
-  aesop (add simp liftSigmaConstMap)
-
-@[simp] lemma liftSigmaConstMap_map (φ : σ → ι) :
-    liftSigmaConstMap R ((sigmaConst.obj Uℤ).map φ) = (sigmaConst.obj R).map φ := by
-  aesop (add simp liftSigmaConstMap)
-
-@[simp] lemma liftSigmaConstMap_add (f g : ∐[σ; Uℤ] ⟶ ∐[ι; Uℤ]) :
-    liftSigmaConstMap R (f + g) = liftSigmaConstMap R f + liftSigmaConstMap R g := by
-  aesop (add simp liftSigmaConstMap)
-
-@[simp] lemma liftSigmaConstMap_sum {α : Type*} (s : Finset α)
-    (f : α → (∐[σ; Uℤ] ⟶ ∐[ι; Uℤ])) :
-    liftSigmaConstMap R (∑ i ∈ s, f i) = ∑ i ∈ s, liftSigmaConstMap R (f i) := by
-  classical
-  induction s using Finset.induction_on with simp_all [- sigmaConst_obj_obj]
-
-@[simp] lemma liftSigmaConstMap_smul
-    (f : ∐[σ; Uℤ] ⟶ ∐[ι; Uℤ]) (a : ℤ) :
-    liftSigmaConstMap R (a • f) = a • liftSigmaConstMap R f := by
-  aesop (add simp liftSigmaConstMap)
-
-@[simp] lemma liftSigmaConstMap_comp
-    (f : ∐[σ; Uℤ] ⟶ ∐[τ; Uℤ]) (g : ∐[τ; Uℤ] ⟶ ∐[ι; Uℤ]) :
-    liftSigmaConstMap R (f ≫ g) = liftSigmaConstMap R f ≫ liftSigmaConstMap R g := by
-  -- stolen from andrew, idk what's going on but it works
-  dsimp only [sigmaConst_obj_obj, liftSigmaConstMap, ULift.smul_def]
-  ext i
-  simp only [Category.assoc, Sigma.ι_desc, Sigma.ι_desc_assoc]
-  refine .trans ?_ congr($(Finsupp.linearCombination_linear_comp _
-    ((Preadditive.rightComp _ _).toIntLinearMap.restrictScalars _)) _)
-  dsimp only [Function.comp_def, LinearMap.coe_restrictScalars, AddMonoidHom.coe_toIntLinearMap,
-    CategoryTheory.Preadditive.rightComp, AddMonoidHom.mk'_apply]
-  simp only [Sigma.ι_desc]
-  rw [← Finsupp.linearCombination_linearCombination]
-  congr 1
-  refine .trans ?_ congr($(Finsupp.linearCombination_linear_comp _
-    ((g ≫ Limits.Sigma.desc fun i ↦ AddCommGrpCat.ofHom (Finsupp.lsingle (R := ℤ) i).toAddMonoidHom)
-    |>.hom.toIntLinearMap.restrictScalars (ULift ℤ))) _).symm
-  dsimp
-  congr 2
-  have : (Limits.Sigma.desc fun i ↦ AddCommGrpCat.ofHom (Finsupp.lsingle (R := ℤ) i).toAddMonoidHom)
-      ≫ AddCommGrpCat.ofHom (Finsupp.linearCombination (ULift.{w} ℤ) fun i ↦
-        (Sigma.ι (fun x : τ ↦ AddCommGrpCat.of (ULift.{w} ℤ)) i).hom 1).toAddMonoidHom = 𝟙 _ := by
-    ext; simp [← map_zsmul]; rfl
-  exact congr($this _).symm
-
-
--- idk lol
-@[local simp] lemma chainComplex_X (s : SSet.{w}) (R : C) n :
-    𝒞[s; R].X n = ∐[s _⦋n⦌; R] :=
-  rfl
-
-variable {s s' : SSet.{w}}
-
-@[local simp] lemma liftSigmaConstMap_singularChainComplexFunctor_d.aux {n} :
-    liftSigmaConstMap R (∂[s; Uℤ] (n + 1) n) = ∂[s; R] (n + 1) n := by
-  simp [- sigmaConst_obj_obj, - sigmaConst_obj_map, SSet.SingularChainComplex.d_eq,
-    SimplicialObject.δ]
-
-@[simp] lemma liftSigmaConstMap_singularChainComplexFunctor_d {i j} :
-    liftSigmaConstMap R (∂[s; Uℤ] i j) = ∂[s; R] i j := by
-  by_cases h : (ComplexShape.down ℕ).Rel i j
-  · obtain rfl : j + 1 = i := by simpa using h
-    simp
-  · simp [HomologicalComplex.shape _ _ _ h]
-
-noncomputable def liftChainMap
-    (f : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]) :
-    𝒞[s; R] ⟶ 𝒞[s'; R] where
-  f n := liftSigmaConstMap R (f.f n)
-  comm' i j hij := by
-    simp only [chainComplex_X, ← liftSigmaConstMap_singularChainComplexFunctor_d (R := R)]
-    -- defeq causing problems as usual
-    rw [← liftSigmaConstMap_comp, ← liftSigmaConstMap_comp, f.comm' _ _ hij]
-
-@[simp] lemma liftChainMap_id :
-    liftChainMap R (𝟙 𝒞[s; Uℤ]) = 𝟙 𝒞[s; R] := by
-  ext; simp [- sigmaConst_obj_obj, liftChainMap]
-
-@[simp] lemma liftChainMap_map (f : s ⟶ s') :
-    liftChainMap R (𝒞[—; Uℤ].map f) = 𝒞[—; R].map f := by
-  aesop (add simp [SSet.singularChainComplexFunctor, liftChainMap, liftSigmaConstMap])
-
-@[simp] lemma liftChainMap_comp
-    {s s' s''} (f : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]) (g : 𝒞[s'; Uℤ] ⟶ 𝒞[s''; Uℤ]) :
-    liftChainMap R (f ≫ g) = liftChainMap R f ≫ liftChainMap R g := by
-  ext; simp [liftChainMap]
-
-noncomputable def liftHomotopy
-    {f g : 𝒞[s; Uℤ] ⟶ 𝒞[s'; Uℤ]}
-    (h : Homotopy f g) :
-    Homotopy (liftChainMap R f) (liftChainMap R g) where
-  hom i j := liftSigmaConstMap R (h.hom i j)
-  zero := by aesop (add simp h.zero)
-  comm := by aesop (add simp [h.comm, liftChainMap, dNext, prevD]) (erase simp [sigmaConst_obj_obj])
-
-noncomputable def liftHomotopyEquiv
-    (e : HomotopyEquiv 𝒞[s; Uℤ] 𝒞[s'; Uℤ]) :
-    HomotopyEquiv 𝒞[s; R] 𝒞[s'; R] where
-  hom := liftChainMap R e.hom
-  inv := liftChainMap R e.inv
-  -- not very dataful fields but that's just fine for us
-  -- (could make this a trans with ofEq on either side)
-  homotopyHomInvId := by convert liftHomotopy R e.homotopyHomInvId <;> simp
-  homotopyInvHomId := by convert liftHomotopy R e.homotopyInvHomId <;> simp
-
-end lifting
-
-
-namespace restrictedChainComplex.toChainComplex
-
 variable
   {C : Type u} [Category.{v} C] [Preadditive C] [HasCoproducts.{w} C]
   (R : C)
@@ -2206,6 +2234,7 @@ lemma sep : IsSeparator Uℤ := by
   apply Functor.Faithful.of_iso coyonedaOpUℤIsoForget.symm
 
 include hcover in
+open Lifting in
 /--
 `restrictedChainComplex.toChainComplex` and some homotopy inverse thereof,
 bundled into a HomotopyEquiv.
