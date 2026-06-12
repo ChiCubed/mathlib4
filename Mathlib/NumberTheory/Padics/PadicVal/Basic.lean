@@ -243,12 +243,32 @@ protected theorem pow {q : ℚ} (hq : q ≠ 0) {k : ℕ} :
   induction k <;>
     simp [*, padicValRat.mul hq (pow_ne_zero _ hq), _root_.pow_succ', add_mul, add_comm]
 
+@[simp]
+protected theorem self_pow {k : ℕ} :
+    padicValRat p (p ^ k) = k := by
+  simp [padicValRat.pow (q := p) (by exact_mod_cast hp.out.ne_zero)]
+
 /-- A rewrite lemma for `padicValRat p (q⁻¹)` with condition `q ≠ 0`. -/
 protected theorem inv (q : ℚ) : padicValRat p q⁻¹ = -padicValRat p q := by
   by_cases hq : q = 0
   · simp [hq]
   · rw [eq_neg_iff_add_eq_zero, ← padicValRat.mul (inv_ne_zero hq) hq, inv_mul_cancel₀ hq,
       padicValRat.one]
+
+protected theorem zpow {q : ℚ} (hq : q ≠ 0) {k : ℤ} :
+    padicValRat p (q ^ k) = k * padicValRat p q := by
+  induction k using Int.negInduction with
+  | nat k =>
+    rw [zpow_natCast]
+    apply padicValRat.pow hq
+  | neg ih k =>
+    simp_rw [zpow_neg, neg_mul, ← ih, zpow_natCast]
+    apply padicValRat.inv
+
+@[simp]
+protected theorem self_zpow {k : ℤ} :
+    padicValRat p (p ^ k) = k := by
+  simp [padicValRat.zpow (q := p) (by exact_mod_cast hp.out.ne_zero)]
 
 /-- A rewrite lemma for `padicValRat p (q / r)` with conditions `q ≠ 0`, `r ≠ 0`. -/
 protected theorem div {q r : ℚ} (hq : q ≠ 0) (hr : r ≠ 0) :
